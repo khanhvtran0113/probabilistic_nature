@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.stats import truncnorm
+from scipy.stats import bernoulli
 import matplotlib.pyplot as plt
 import noise
 
@@ -21,7 +22,75 @@ def generate_landscape(width, height, scale):
             else:  # Create sky
                 color_world[y][x] = blend_colors(sky_base_color, np.array([255, 255, 255]),
                                                  sky_color_blend_factor_fnc(y))
+
+    add_trees(color_world, width, height, scale)
     return color_world
+
+
+def add_trees(color_world, width, height, scale):
+    # Generate list of centers
+    num_of_centers = np.random.binomial(3, 0.5)
+    centers = list()
+    for i in range(num_of_centers):
+        cx = int(np.random.uniform(0, width))
+        hill_height = int(noise.pnoise1(cx * scale, octaves=2) * height / 4 + height / 2)
+        cy = int(np.random.uniform(hill_height, height))
+        centers.append([cx, cy])
+
+    # Randomly pick season
+    season = np.random.randint(0, 3)
+
+    # Loop through x and y
+    print(centers)
+    for x in range(0, width, 50):
+        hill_height = int(noise.pnoise1(x * scale, octaves=2) * height / 4 + height / 2)
+        for y in range(hill_height, height, 50):
+            if rbf_distribution(x, y, centers, 300):
+                draw_tree(color_world, x, y, height, width, season)
+
+
+def draw_tree(color_world, x, y, height, width, season):
+    if season == 0:  # Spring
+        bark_color = np.array([140, 70, 20])  # Lighter brown for spring
+        leaf_color = np.array([60, 179, 113])  # Light green for spring leaves
+    elif season == 1:  # Summer
+        bark_color = np.array([101, 67, 33])  # Dark brown for summer
+        leaf_color = np.array([0, 128, 0])  # Dark green for summer leaves
+    elif season == 2:  # Fall
+        bark_color = np.array([150, 75, 25])  # Medium brown for fall
+        leaf_color = np.array([255, 165, 0])  # Orange for fall leaves
+    else:  # Winter
+        bark_color = np.array([120, 60, 30])  # Grey-brown for winter
+        leaf_color = np.array([255, 255, 255])  # White for snow-covered leaves
+
+    tree_height= int(240*(y-0.5*height)/height)
+    tree_width = int(120*(y-0.5*height)/height)
+
+    # Draw the trunk
+    trunk_height = tree_height // 3
+    trunk_width = tree_width // 3
+    trunk_x = x + (tree_width - trunk_width) // 2
+    for i in range(trunk_height):
+        for j in range(trunk_width):
+            if 0 < trunk_x + j < width and 0 < y - i < height:
+                color_world[y - i][trunk_x + j] = bark_color
+
+    # Draw the leaves
+    leaves_height = tree_height - trunk_height
+    leaves_width = tree_width
+    for i in range(leaves_height):
+        for j in range(leaves_width):
+            if abs(j - leaves_width // 2) <= leaves_height-i:
+                if 0 < x + j < width and 0 < y - trunk_height - i < height:
+                    color_world[y - trunk_height - i][x + j] = leaf_color
+
+
+def rbf_distribution(x, y, centers, sigma):
+    probability = 0
+    for cx, cy in centers:
+        distance = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
+        probability += np.exp(-distance ** 2 / (2 * sigma ** 2))
+    return 1 == bernoulli.rvs(probability / 10)
 
 
 def get_base_sky_color():
@@ -48,10 +117,7 @@ def get_base_sky_color():
 
 
 def get_sky_color_blend_factor_fnc(height):
-
-    # Generate y-value of horizon using a Normal distribution centered at 256 (halfway
-    # through the height) and truncated at 0 and 512
-    horizon_mean = height / 2
+    horizon_mean = height / 4
     horizon_std_dev = height / 8
     lower_bound = 0
     upper_bound = height
