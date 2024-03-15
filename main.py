@@ -23,8 +23,40 @@ def generate_landscape(width, height, scale):
                 color_world[y][x] = blend_colors(sky_base_color, np.array([255, 255, 255]),
                                                  sky_color_blend_factor_fnc(y))
 
+    add_rocks(color_world, width, height, scale)
     add_trees(color_world, width, height, scale)
     return color_world
+
+
+def add_rocks(color_world, width, height, scale):
+    num_of_rocks = int(np.random.geometric(1 / 5))
+
+    rock_locations = list()
+    for i in range(num_of_rocks):
+        x = int(np.random.uniform(0, width))
+        hill_height = int(noise.pnoise1(x * scale, octaves=2) * height / 4 + height / 2)
+        y = int(np.random.uniform(hill_height, height))
+        rock_locations.append([x, y])
+
+    for x, y in rock_locations:
+        draw_rocks(color_world, x, y, height, width, scale)
+
+
+def draw_rocks(color_world, x, y, height, width, scale):
+    aspect_ratio = 1.5
+    imperfection = scale*100
+
+    rock_size = int(180 * (y - 0.5 * height) / height)
+    rock_color = np.array([128, 128, 128])
+
+    radius_x = rock_size // 2
+    radius_y = int(radius_x / aspect_ratio)
+    for i in range(-radius_y, radius_y + 1):
+        for j in range(-radius_x, radius_x + 1):
+            if ((j / (radius_x * (1 + np.random.uniform(-imperfection, imperfection)))) ** 2 +
+            (i / (radius_y * (1 + np.random.uniform(-imperfection, imperfection)))) ** 2) <= 1:
+                if 0 < y - i < height and 0 < x + j < width:
+                    color_world[y - i, x + j] = rock_color
 
 
 def add_trees(color_world, width, height, scale):
@@ -63,8 +95,8 @@ def draw_tree(color_world, x, y, height, width, season):
         bark_color = np.array([120, 60, 30])  # Grey-brown for winter
         leaf_color = np.array([255, 255, 255])  # White for snow-covered leaves
 
-    tree_height= int(240*(y-0.5*height)/height)
-    tree_width = int(120*(y-0.5*height)/height)
+    tree_height = int(240 * (y - 0.5 * height) / height)
+    tree_width = int(120 * (y - 0.5 * height) / height)
 
     # Draw the trunk
     trunk_height = tree_height // 3
@@ -80,7 +112,7 @@ def draw_tree(color_world, x, y, height, width, season):
     leaves_width = tree_width
     for i in range(leaves_height):
         for j in range(leaves_width):
-            if abs(j - leaves_width // 2) <= leaves_height-i:
+            if abs(j - leaves_width // 2) <= leaves_height - i:
                 if 0 < x + j < width and 0 < y - trunk_height - i < height:
                     color_world[y - trunk_height - i][x + j] = leaf_color
 
