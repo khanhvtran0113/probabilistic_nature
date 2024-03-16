@@ -66,10 +66,10 @@ def add_clouds(color_world, width, height, scale):
         cloud_locations.append([x, y])
 
     for x, y in cloud_locations:
-        draw_clouds(color_world, x, y, height, width, scale)
+        draw_cloud(color_world, x, y, height, width, scale)
 
 
-def draw_clouds(color_world, x, y, height, width, scale):
+def draw_cloud(color_world, x, y, height, width, scale):
     """
     This function draws a single cloud at the requested location
 
