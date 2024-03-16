@@ -20,12 +20,46 @@ def generate_landscape(width, height, scale):
             if y >= hill_height:  # Create hill
                 color_world[y][x] = get_hill_color(x, y, scale, hill_height)
             else:  # Create sky
-                color_world[y][x] = blend_colors(sky_base_color, np.array([255, 255, 255]),
+                sky_white = blend_colors(sky_base_color, np.array([255, 255, 255]), 0.9)
+                color_world[y][x] = blend_colors(sky_base_color, sky_white,
                                                  sky_color_blend_factor_fnc(y))
 
+    add_clouds(color_world, width, height, scale)
     add_rocks(color_world, width, height, scale)
     add_trees(color_world, width, height, scale)
     return color_world
+
+
+def add_clouds(color_world, width, height, scale):
+    num_of_clouds = int(np.random.geometric(1 / 5))
+
+    cloud_locations = list()
+    for i in range(num_of_clouds):
+        x = int(np.random.uniform(0, width))
+        hill_height = int(noise.pnoise1(x * scale, octaves=2) * height / 4 + height / 2)
+        y = int(np.random.uniform(0, hill_height-300))
+        cloud_locations.append([x, y])
+
+    for x, y in cloud_locations:
+        draw_clouds(color_world, x, y, height, width, scale)
+
+
+def draw_clouds(color_world, x, y, height, width, scale):
+    aspect_ratio = np.random.uniform(1.5, 2.5)
+    imperfection = scale * 500
+
+    cloud_size = int(np.random.normal(200, scale * 1000))
+    cloud_color = np.array([250, 250, 250])
+
+    radius_x = cloud_size // 2
+    radius_y = int(radius_x / aspect_ratio)
+    for i in range(-radius_y, radius_y + 1):
+        for j in range(-radius_x, radius_x + 1):
+            distance = (j / radius_x) ** 2 + (i / radius_y) ** 2
+            if distance <= 1 and 0 < y - i < height and 0 < x + j < width:
+                fuzziness = np.random.uniform(-imperfection, imperfection)
+                if distance + fuzziness <= 1:
+                    color_world[y - i, x + j] = cloud_color
 
 
 def add_rocks(color_world, width, height, scale):
@@ -43,8 +77,8 @@ def add_rocks(color_world, width, height, scale):
 
 
 def draw_rocks(color_world, x, y, height, width, scale):
-    aspect_ratio = 1.5
-    imperfection = scale*100
+    aspect_ratio = np.random.uniform(1.2, 2)
+    imperfection = scale * 100
 
     rock_size = int(180 * (y - 0.5 * height) / height)
     rock_color = np.array([128, 128, 128])
@@ -54,7 +88,7 @@ def draw_rocks(color_world, x, y, height, width, scale):
     for i in range(-radius_y, radius_y + 1):
         for j in range(-radius_x, radius_x + 1):
             if ((j / (radius_x * (1 + np.random.uniform(-imperfection, imperfection)))) ** 2 +
-            (i / (radius_y * (1 + np.random.uniform(-imperfection, imperfection)))) ** 2) <= 1:
+                (i / (radius_y * (1 + np.random.uniform(-imperfection, imperfection)))) ** 2) <= 1:
                 if 0 < y - i < height and 0 < x + j < width:
                     color_world[y - i, x + j] = rock_color
 
@@ -73,15 +107,14 @@ def add_trees(color_world, width, height, scale):
     season = np.random.randint(0, 3)
 
     # Loop through x and y
-    print(centers)
     for x in range(0, width, 50):
         hill_height = int(noise.pnoise1(x * scale, octaves=2) * height / 4 + height / 2)
         for y in range(hill_height, height, 50):
             if rbf_distribution(x, y, centers, 300):
-                draw_tree(color_world, x, y, height, width, season)
+                draw_tree(color_world, x, y, height, width, season, scale)
 
 
-def draw_tree(color_world, x, y, height, width, season):
+def draw_tree(color_world, x, y, height, width, season, scale):
     if season == 0:  # Spring
         bark_color = np.array([140, 70, 20])  # Lighter brown for spring
         leaf_color = np.array([60, 179, 113])  # Light green for spring leaves
@@ -95,8 +128,13 @@ def draw_tree(color_world, x, y, height, width, season):
         bark_color = np.array([120, 60, 30])  # Grey-brown for winter
         leaf_color = np.array([255, 255, 255])  # White for snow-covered leaves
 
+    # Get initial tree size
     tree_height = int(240 * (y - 0.5 * height) / height)
     tree_width = int(120 * (y - 0.5 * height) / height)
+
+    # Add variance to tree size
+    tree_height = int(tree_height * np.random.normal(1, scale * 200))
+    tree_width = int(tree_width * np.random.normal(1, scale * 200))
 
     # Draw the trunk
     trunk_height = tree_height // 3
