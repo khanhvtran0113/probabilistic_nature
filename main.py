@@ -74,10 +74,9 @@ def draw_cloud(color_world, x, y, height, width, scale):
     This function draws a single cloud at the requested location
 
     The function does this via the following steps
-    1. Determines the aspec ratio of the cloud via a uniform distribution
+    1. Determines the aspect ratio of the cloud via a uniform distribution
     2. Determine the size of the cloud via a normal distribution
-    3. Scale the size based on how close it is to the horizon
-    4. Draws the cloud with some added fuzziness via a custom spatial distribution
+    3. Draws the cloud with some added fuzziness via a custom spatial distribution
     implemented with based on multiple samples from a uniform distribution
     """
     aspect_ratio = np.random.uniform(1.5, 2.5)
